@@ -1,0 +1,221 @@
+{
+  "template": {
+    "body": [{
+      "componentType": "instance",
+      "persistentVolumeClaims": null,
+      "deployments": [
+        {
+          "kind": "Deployment",
+          "apiVersion": "extensions/v1beta1",
+          "metadata": {
+            "name": "$idx_and_short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "plan_id": "$plan_id",
+              "offering_id": "$offering_id",
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "spec": {
+            "replicas": 1,
+            "selector": {
+              "matchLabels": {
+                "idx_and_short_instance_id": "$idx_and_short_instance_id",
+                "instance_id": "$instance_id"
+              }
+            },
+            "template": {
+              "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                  "idx_and_short_instance_id": "$idx_and_short_instance_id",
+                  "managed_by": "TAP",
+                  "instance_id": "$instance_id"
+                }
+              },
+              "spec": {
+                "volumes": null,
+                "containers": [
+                  {
+                    "name": "k-logstash14",
+                    "image": "cfcommunity/logstash",
+                    "ports": [
+                      {
+                        "containerPort": 514,
+                        "protocol": "TCP"
+                      },
+                      {
+                        "containerPort": 9200,
+                        "protocol": "TCP"
+                      },
+                      {
+                        "containerPort": 9292,
+                        "protocol": "TCP"
+                      },
+                      {
+                        "containerPort": 9300,
+                        "protocol": "TCP"
+                      }
+                    ],
+                    "env": [
+                      {
+                        "name": "RABBITMQ_USERNAME",
+                        "valueFrom": {
+                          "secretKeyRef": {
+                            "Name": "$short_instance_id-logstash-credentials",
+                            "key": "rabbitmq-username"
+                          }
+                        }
+                      },
+                      {
+                        "name": "RABBITMQ_PASSWORD",
+                        "valueFrom": {
+                          "secretKeyRef": {
+                            "Name": "$short_instance_id-logstash-credentials",
+                            "key": "rabbitmq-password"
+                          }
+                        }
+                      },
+                      {
+                        "name": "MANAGED_BY",
+                        "value": "TAP"
+                      }
+                    ],
+                    "resources": {},
+                    "imagePullPolicy": "IfNotPresent"
+                  }
+                ],
+                "restartPolicy": "Always",
+                "dnsPolicy": "ClusterFirst",
+                "serviceAccountName": ""
+              }
+            },
+            "strategy": {}
+          },
+          "status": {}
+        }
+      ],
+      "services": [
+        {
+          "kind": "Service",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$idx_and_short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "plan_id": "$plan_id",
+              "offering_id": "$offering_id",
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "spec": {
+            "type": "NodePort",
+            "ports": [
+              {
+                "name": "syslog",
+                "protocol": "TCP",
+                "port": 514,
+                "targetPort": 0,
+                "nodePort": 0
+              },
+              {
+                "name": "transport",
+                "protocol": "TCP",
+                "port": 9200,
+                "targetPort": 0,
+                "nodePort": 0
+              },
+              {
+                "name": "kibana",
+                "protocol": "TCP",
+                "port": 9292,
+                "targetPort": 0,
+                "nodePort": 0
+              },
+              {
+                "name": "rest",
+                "protocol": "TCP",
+                "port": 9300,
+                "targetPort": 0,
+                "nodePort": 0
+              }
+            ],
+            "selector": {
+              "instance_id": "$instance_id"
+            }
+          },
+          "status": {
+            "loadBalancer": {}
+          }
+        }
+      ],
+      "serviceAccounts": [
+        {
+          "kind": "ServiceAccount",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$idx_and_short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "plan_id": "$plan_id",
+              "offering_id": "$offering_id",
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "secrets": null
+        }
+      ],
+      "secrets": [
+        {
+          "kind": "Secret",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$short_instance_id-logstash-credentials",
+            "creationTimestamp": null,
+            "labels": {
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "instance_id": "$instance_id"
+            }
+          },
+          "data": {
+            "rabbitmq-password": "$base64-$random1",
+            "rabbitmq-username": "$base64-$random2"
+          }
+        }
+      ]
+    }],
+    "hooks": null
+  },
+  "services": [{
+    "name": "logstash-service",
+    "description": "it's finally logstash!",
+    "metadata": [],
+    "bindable": true,
+    "tags": [
+      "logstash14",
+      "logstash",
+      "syslog",
+      "k8s"
+    ],
+    "plans": [
+      {
+        "name": "free",
+        "description": "free",
+        "cost": "free"
+      }
+    ]
+  }]
+}

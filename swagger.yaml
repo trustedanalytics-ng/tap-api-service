@@ -1,0 +1,2702 @@
+# Copyright (c) 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+swagger: '2.0'
+info:
+  version: "3"
+  title: tap-api-service
+  description: API used by UI dashboard and cli for monitoring and managing of entities such as applications, services and bindings
+securityDefinitions:
+  UserSecurity:
+    type: basic
+  OauthSecurity:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: '/api/v1/login'
+    tokenUrl: '/api/v1/login'
+paths:
+  /healthz:
+    get:
+      summary: Get health status for console service
+      responses:
+        200:
+          description: OK
+        500:
+          description: Unexpected error
+  /api/v1/login:
+    get:
+      summary: Login to api and get credentials
+      responses:
+        200:
+          description: Credentials
+          schema:
+            $ref: '#/definitions/LoginResponse'
+        401:
+          description: Unauthorized
+        500:
+          description: Unexpected error
+      security:
+        - UserSecurity: []
+  /api/v1/platform_info:
+    get:
+      summary: Get information about platform
+      security:
+        - OauthSecurity: []
+      responses:
+        200:
+          description: Returns platform info object
+          schema:
+            $ref: '#/definitions/PlatformInfo'
+        401:
+          description: Unauthorized
+        500:
+          description: Unexpected error
+  /api/v1/platform_components:
+    get:
+      summary: Get information about platform
+      security:
+        - OauthSecurity: []
+      responses:
+        200:
+          description: Returns platform info object
+          schema:
+            $ref: '#/definitions/PlatformComponents'
+        401:
+          description: Unauthorized
+        500:
+          description: Unexpected error
+  /api/v1/offerings:
+    get:
+      security:
+        - OauthSecurity: []
+      summary: Get list of service offerings
+      responses:
+        200:
+          description: List of service offerings
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Offering'
+        401:
+          description: Unauthorized
+        500:
+          description: Unexpected error
+    post:
+      security:
+        - OauthSecurity: []
+      summary: Create service offering
+      parameters:
+        - in: body
+          name: body
+          description: Additional properties for service deployment. `broker_name` is required when offering type is `broker`.
+          required: true
+          schema:
+            $ref: '#/definitions/ServiceDeploy'
+      responses:
+        202:
+          description: Accepted offering
+          schema:
+            $ref: '#/definitions/CatalogService'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        409:
+          description: Conflict
+        500:
+          description: Unexpected error
+  /api/v1/offerings/binary:
+    post:
+      security:
+        - OauthSecurity: []
+      summary: Build an image with Java application and publish as service offering in marketplace
+      consumes:
+        - multipart/form-data
+      parameters:
+        - in: formData
+          name: blob
+          type: file
+          required: true
+          description: Java *.jar file
+        - in: formData
+          name: manifest
+          required: true
+          type: file
+          description: Manifest describing application. It's representation is in Manifest object definition.
+      responses:
+        202:
+          description: Created offering
+          schema:
+            $ref: '#/definitions/CatalogService'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        409:
+          description: Conflict
+        500:
+          description: Unexpected error
+  /api/v1/offerings/application:
+    post:
+      security:
+        - OauthSecurity: []
+      summary: Create new offering in marketplace based on application
+      parameters:
+        - in: body
+          name: body
+          description: Additional properties for service deployment
+          required: true
+          schema:
+            $ref: '#/definitions/CreateOfferingFromApplicationRequest'
+      responses:
+        200:
+          description: Created offering
+          schema:
+            $ref: '#/definitions/CatalogService'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        409:
+          description: Conflict
+        500:
+          description: Unexpected error
+  /api/v1/offerings/{offeringId}:
+    get:
+      parameters:
+        - in: path
+          name: offeringId
+          description: ID of service offering to get
+          required: true
+          type: string
+      security:
+        - OauthSecurity: []
+      summary: Get list of service offerings
+      responses:
+        200:
+          description: List of service offerings
+          schema:
+              $ref: '#/definitions/Offering'
+        401:
+          description: Unauthorized
+        404:
+          description: Not found
+        500:
+          description: Unexpected error
+    delete:
+      parameters:
+        - in: path
+          name: offeringId
+          description: ID of service offering to delete
+          required: true
+          type: string
+      security:
+        - OauthSecurity: []
+      summary: Delete service offering
+      responses:
+        204:
+          description: Gone
+        401:
+          description: Unauthorized
+        404:
+          description: Not found
+        500:
+          description: Unexpected error
+  /api/v1/applications:
+    get:
+      summary: List application instances, with filtering and pagination
+      parameters:
+        - in: query
+          name: name
+          description: Application name to filter
+          required: false
+          type: string
+        - in: query
+          name: limit
+          description: Maximum number of elements shown
+          required: false
+          type: string
+        - in: query
+          name: skip
+          description: Number of elements skipped
+          required: false
+          type: string
+      security:
+        - OauthSecurity: []
+      responses:
+        200:
+          description: List of application instances
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/ApplicationInstance'
+        401:
+          description: Unauthorized
+        500:
+          description: Unexpected error
+    post:
+      summary: Creates application instance
+      security:
+        - OauthSecurity: []
+      consumes:
+        - multipart/form-data
+      parameters:
+        - in: formData
+          name: blob
+          type: file
+          required: true
+          description: tar.gz package containing application with run.sh file, which should start application
+        - in: formData
+          name: manifest
+          required: true
+          type: file
+          description: Manifest describing application. It's representation is in Manifest object definition.
+      responses:
+        202:
+          description: Creation of application instance stated
+          schema:
+            $ref: '#/definitions/Application'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        409:
+          description: Conflict
+        500:
+          description: Unexpected error
+  /api/v1/applications/{applicationId}:
+    delete:
+      summary: Deletes application instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: applicationId
+          description: Application instance ID
+          required: true
+          type: string
+      responses:
+        202:
+          description: Application deletion started
+        401:
+          description: Unauthorized
+        404:
+          description: Not found
+        500:
+          description: Unexpected error
+    get:
+      summary: Get application instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: applicationId
+          description: Application instance ID
+          required: true
+          type: string
+      responses:
+        200:
+          description: List of application instances
+          schema:
+            $ref: '#/definitions/ApplicationInstance'
+        401:
+          description: Unauthorized
+        404:
+          description: Not found
+        500:
+          description: Unexpected error
+  /api/v1/applications/{applicationId}/logs:
+    get:
+      summary: Get logs for applications
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: applicationId
+          description: ID of the entity that logs should be fetched
+          required: true
+          type: string
+      responses:
+        200:
+          description: Logs from particular entity
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+        401:
+          description: Unauthorized
+        404:
+          description: Not found
+        500:
+          description: Unexpected error
+  /api/v1/applications/{applicationId}/scale:
+    put:
+      summary: Scale application instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: applicationId
+          description: ID of the service that should be instantiated
+          required: true
+          type: string
+        - in: body
+          name: replication
+          description: Number of scaled application instances
+          required: true
+          schema:
+            $ref: '#/definitions/ScaleApplicationRequest'
+      responses:
+        202:
+          description: Application scaled
+          schema:
+            $ref: '#/definitions/MessageResponse'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        404:
+          description: application instance does not exist
+        500:
+          description: Unexpected error
+  /api/v1/applications/{applicationId}/bindings:
+    post:
+      summary: Bind other instance with application, so that application will have credentials to connect to service instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: applicationId
+          description: ID of application that should be bind
+          required: true
+          type: string
+        - in: body
+          name: ActionRequest
+          description: ID of the service
+          required: true
+          schema:
+            $ref: '#/definitions/InstanceBindingRequest'
+      responses:
+        202:
+          description: Bind operation has been accepted
+          schema:
+            $ref: '#/definitions/MessageResponse'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        404:
+          description: Application not found
+        409:
+          description: Conflict
+        500:
+          description: Unexpected error
+    get:
+      summary: Get a list of instances bound to application
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: applicationId
+          description: ID of application whose bindings are retrieved
+          required: true
+          type: string
+      responses:
+        200:
+          description: Bindings list retrieved
+          schema:
+            $ref: '#/definitions/InstanceBindings'
+        401:
+          description: Unauthorized
+        404:
+          description: Application not found
+        500:
+          description: Unexpected error
+  /api/v1/applications/{applicationId}/bindings/services/{srcServiceId}:
+    delete:
+      summary: Remove service from application binding
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: srcServiceId
+          description: ID of service that should be unbound from application
+          required: true
+          type: string
+        - in: path
+          name: applicationId
+          description: ID of application that should be the target of unbind operation
+          required: true
+          type: string
+      responses:
+        204:
+          description: Unbind operation has been accepted
+          schema:
+            $ref: '#/definitions/MessageResponse'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        404:
+          description: Application not found
+        500:
+          description: Unexpected error
+  /api/v1/applications/{applicationId}/bindings/applications/{srcApplicationId}:
+    delete:
+      summary: Remove application from application binding
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: srcApplicationId
+          description: ID of application that should be unbound from application
+          required: true
+          type: string
+        - in: path
+          name: applicationId
+          description: ID of application that should be the target of unbind operation
+          required: true
+          type: string
+      responses:
+        204:
+          description: Unbind operation has been accepted
+          schema:
+            $ref: '#/definitions/MessageResponse'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        404:
+          description: Application not found
+        500:
+          description: Unexpected error
+  /api/v1/applications/{applicationId}/stop:
+      put:
+        summary: Stop application instance
+        security:
+          - OauthSecurity: []
+        parameters:
+          - in: path
+            name: applicationId
+            description: ID of the application instance that should be stopped
+            required: true
+            type: string
+        responses:
+          202:
+            description: Application stopped
+            schema:
+              $ref: '#/definitions/MessageResponse'
+          401:
+            description: Unauthorized
+          404:
+            description: application instance does not exist
+          500:
+            description: Unexpected error
+  /api/v1/applications/{applicationId}/start:
+      put:
+        summary: Start application instance
+        security:
+          - OauthSecurity: []
+        parameters:
+          - in: path
+            name: applicationId
+            description: ID of the application instance that should be started
+            required: true
+            type: string
+        responses:
+          202:
+            description: Application started
+            schema:
+              $ref: '#/definitions/MessageResponse'
+          401:
+            description: Unauthorized
+          404:
+            description: application instance does not exist
+          500:
+            description: Unexpected error
+  /api/v1/applications/{applicationId}/restart:
+        put:
+          summary: Restart application instance
+          security:
+            - OauthSecurity: []
+          parameters:
+            - in: path
+              name: applicationId
+              description: ID of the application instance that should be restarted
+              required: true
+              type: string
+          responses:
+            202:
+              description: Application started
+              schema:
+                $ref: '#/definitions/MessageResponse'
+            401:
+              description: Unauthorized
+            404:
+              description: application instance does not exist
+            500:
+              description: Unexpected error
+  /api/v1/services:
+    get:
+      summary: List service instances, uses filters
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: query
+          name: offeringId
+          description: ID of offering to filter
+          required: false
+          type: string
+        - in: query
+          name: offeringName
+          description: Name of offering to filter
+          required: false
+          type: string
+        - in: query
+          name: planName
+          description: Plan name to filter
+          required: false
+          type: string
+        - in: query
+          name: name
+          description: Service name to filter
+          required: false
+          type: string
+        - in: query
+          name: limit
+          description: Maximum number of elements shown
+          required: false
+          type: string
+        - in: query
+          name: skip
+          description: Number of elements skipped
+          required: false
+          type: string
+      responses:
+        200:
+          description: List of service instances, with filtering and pagination
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/ServiceInstance'
+        401:
+          description: Unauthorized
+        500:
+          description: Unexpected error
+    post:
+      summary: Creates service instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: body
+          name: body
+          description: Additional properties for creating instance. `Bindings` are optional.
+          required: true
+          schema:
+            $ref: '#/definitions/ServiceInstance'
+      responses:
+        202:
+          description: Service instance creation request accepted
+          schema:
+            $ref: '#/definitions/ServiceInstance'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        409:
+          description: Conflict
+        500:
+          description: Unexpected error
+  /api/v1/services/{serviceId}:
+    get:
+      summary: Get particular service instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: serviceId
+          description: ID of the service instance from which information will be fetched
+          required: true
+          type: string
+      responses:
+        201:
+          description: Information about particular service instance
+          schema:
+            $ref: '#/definitions/ServiceInstance'
+        401:
+          description: Unauthorized
+        404:
+          description: Service not found
+        500:
+          description: Unexpected error
+    delete:
+      summary: Deletes particular service instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: serviceId
+          description: ID of the service instance that will be deleted
+          required: true
+          type: string
+      responses:
+        202:
+          description: Service instance deletetion request accepted
+        401:
+          description: Unauthorized
+        404:
+          description: Service not found
+        500:
+          description: Unexpected error
+  /api/v1/services/{serviceId}/stop:
+      put:
+        summary: Stop service instance
+        security:
+          - OauthSecurity: []
+        parameters:
+          - in: path
+            name: serviceId
+            description: ID of the service instance that should be stopped
+            required: true
+            type: string
+        responses:
+          202:
+            description: Service stopped
+            schema:
+              $ref: '#/definitions/MessageResponse'
+          401:
+            description: Unauthorized
+          404:
+            description: service instance does not exist
+          500:
+            description: Unexpected error
+  /api/v1/services/{serviceId}/start:
+      put:
+        summary: Start service instance
+        security:
+          - OauthSecurity: []
+        parameters:
+          - in: path
+            name: serviceId
+            description: ID of the service instance that should be started
+            required: true
+            type: string
+        responses:
+          202:
+            description: Service started
+            schema:
+              $ref: '#/definitions/MessageResponse'
+          401:
+            description: Unauthorized
+          404:
+            description: service instance does not exist
+          500:
+            description: Unexpected error
+  /api/v1/services/{serviceId}/restart:
+        put:
+          summary: Restart service instance
+          security:
+            - OauthSecurity: []
+          parameters:
+            - in: path
+              name: serviceId
+              description: ID of the service instance that should be restarted
+              required: true
+              type: string
+          responses:
+            202:
+              description: Service started
+              schema:
+                $ref: '#/definitions/MessageResponse'
+            401:
+              description: Unauthorized
+            404:
+              description: service instance does not exist
+            500:
+              description: Unexpected error
+  /api/v1/services/{serviceId}/credentials:
+    get:
+      summary: Provide credentials used to connect to a service instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: serviceId
+          description: ID of service to display data for
+          required: true
+          type: string
+      responses:
+        200:
+          description: Environment variables of specified instance
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/ContainerCredenials'
+        401:
+          description: Unauthorized
+        404:
+          description: Service not found
+        500:
+          description: Unexpected error
+  /api/v1/services/{serviceId}/expose:
+    put:
+      summary: Enable or disable service exposure
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: serviceId
+          description: ID of service to display data for
+          required: true
+          type: string
+        - in: body
+          name: ExposureRequest
+          description: State to which exposure should be set
+          required: true
+          schema:
+            $ref: '#/definitions/ExposureRequest'
+      responses:
+        200:
+          description: Exposure state changed
+          schema:
+            type: array
+            items:
+             type: string
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        404:
+          description: Service not found
+        500:
+          description: Unexpected error
+  /api/v1/services/{serviceId}/bindings:
+    post:
+      summary: Bind instance with service, so that service will have credentials to connect to this instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: serviceId
+          description: ID of service that should be bound
+          required: true
+          type: string
+        - in: body
+          name: ActionRequest
+          description: ID of the instance that will return credentials
+          required: true
+          schema:
+            $ref: '#/definitions/InstanceBindingRequest'
+      responses:
+        200:
+          description: Instance successfully bound to service
+          schema:
+            $ref: '#/definitions/MessageResponse'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        404:
+          description: Service not found
+        409:
+          description: Conflict
+        500:
+          description: Unexpected error
+    get:
+      summary: Get bind data for service
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: serviceId
+          description: ID of service to display data
+          required: true
+          type: string
+      responses:
+        200:
+          description: Bindings lists retrieved
+          schema:
+            $ref: '#/definitions/InstanceBindings'
+        401:
+          description: Unauthorized
+        404:
+          description: Service not found
+        500:
+          description: Unexpected error
+  /api/v1/services/{serviceId}/bindings/services/{srcServiceId}:
+    delete:
+      summary: Remove service from service binding
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: srcServiceId
+          description: ID of service that should be unbound from service
+          required: true
+          type: string
+        - in: path
+          name: serviceId
+          description: ID of service that should be the target of unbind operation
+          required: true
+          type: string
+      responses:
+        204:
+          description: Unbind operation has been accepted
+          schema:
+            $ref: '#/definitions/MessageResponse'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        404:
+          description: Application not found
+        500:
+          description: Unexpected error
+  /api/v1/services/{serviceId}/bindings/applications/{srcApplicationId}:
+    delete:
+      summary: Remove application from service binding
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: srcApplicationId
+          description: ID of application that should be unbound from service
+          required: true
+          type: string
+        - in: path
+          name: serviceId
+          description: ID of service that should be the target of unbind operation
+          required: true
+          type: string
+      responses:
+        204:
+          description: Unbind operation has been accepted
+          schema:
+            $ref: '#/definitions/MessageResponse'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        404:
+          description: Application not found
+        500:
+          description: Unexpected error
+  /api/v1/services/{serviceId}/logs:
+    get:
+      summary: Get logs from a service instance
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: serviceId
+          description: ID of the entity that logs should be fetched
+          required: true
+          type: string
+      responses:
+        200:
+          description: Logs from particular entity
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+        401:
+          description: Unauthorized
+        404:
+          description: Service not found
+        500:
+          description: Unexpected error
+  /api/v1/users:
+    get:
+      summary: Get list of users
+      security:
+        - OauthSecurity: []
+      responses:
+        200:
+          description: List of platform users
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/User'
+        401:
+          description: Unauthorized
+        403:
+          description: Not enough privileges to perform an action (not an admin)
+        500:
+          description: Unexpected error
+    delete:
+      summary: Delete user
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: body
+          name: Invitation
+          description: Email of user to remove from platform
+          required: true
+          schema:
+            $ref: '#/definitions/Invitation'
+      responses:
+        204:
+          description: Removed
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        403:
+          description: Not enough privileges to perform an action (not an admin)
+        404:
+          description: Not found
+        500:
+          description: Unexpected error
+  /api/v1/users/current/password:
+    put:
+      summary: Update current user's password
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: body
+          name: Invitation
+          description: New user email
+          required: true
+          schema:
+            $ref: '#/definitions/ChangePasswordRequest'
+      responses:
+        200:
+          description: Password changed
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        500:
+          description: Unexpected error
+  /api/v1/users/invitations:
+    post:
+      summary: Sends invitation for new user
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: body
+          name: Invitation
+          description: New user email
+          required: true
+          schema:
+            $ref: '#/definitions/Invitation'
+      responses:
+        201:
+          description: Created
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        403:
+          description: Not enough privileges to perform an action (not an admin)
+        500:
+          description: Unexpected error
+    get:
+      summary: Get all pending invitations
+      security:
+        - OauthSecurity: []
+      responses:
+        200:
+          description: List of emails with pending invitations
+          schema:
+            type: array
+            items:
+              type: string
+        401:
+          description: Unauthorized
+        403:
+          description: Not enough privileges to perform an action (not an admin)
+    delete:
+      summary: Removes already sent invitation so that user cannot use it for registration purposes
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: body
+          name: Invitation
+          description: Email of user to delete invitation
+          required: true
+          schema:
+            $ref: '#/definitions/Invitation'
+      responses:
+        204:
+          description: Invitation removed
+        401:
+          description: Unauthorized
+        403:
+          description: Not enough privileges to perform an action (not an admin)
+        404:
+          description: Not found
+        500:
+          description: Unexpected error
+  /api/v1/users/invitations/resend:
+    post:
+      summary: Sends invitation again for already invited user
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: body
+          name: Invitation
+          description: Email address of user who require activation email being resent
+          required: true
+          schema:
+            $ref: '#/definitions/Invitation'
+      responses:
+        201:
+          description: invitation was sent again
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        403:
+          description: Not enough privileges to perform an action (not an admin)
+        404:
+          description: Not found
+        422:
+          description: New and old passwords should differ
+        500:
+          description: Unexpected error
+  /api/v1/metrics/single:
+    get:
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: query
+          name: metric
+          description: metric name
+          required: true
+          type: string
+        - in: query
+          name: from
+          description: time from, negative value is added to current timestamp
+          required: false
+          type: string
+        - in: query
+          name: to
+          description: time to, negative value is added to current timestamp
+          required: false
+          type: string
+      responses:
+        200:
+          description: metrics
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Metric'
+        401:
+          description: Unauthorized
+        500:
+          description: Unexpected error
+  /api/v1/metrics/platform:
+      get:
+        security:
+          - OauthSecurity: []
+        parameters:
+          - in: query
+            name: from
+            description: time from, negative value is added to current timestamp
+            required: false
+            type: string
+          - in: query
+            name: to
+            description: time to, negative value is added to current timestamp
+            required: false
+            type: string
+        responses:
+          200:
+            description: metrics
+            schema:
+              type: array
+              items:
+                $ref: '#/definitions/PlatformMetrics'
+          401:
+            description: Unauthorized
+          404:
+            description: Not found
+          500:
+            description: Unexpected error
+  /api/v1/metrics/organizations/{orgId}:
+    get:
+      security:
+        - OauthSecurity: []
+      parameters:
+        - in: path
+          name: orgId
+          description: organization id
+          required: true
+          type: string
+        - in: query
+          name: from
+          description: time from, negative value is added to current timestamp
+          required: false
+          type: string
+        - in: query
+          name: to
+          description: time to, negative value is added to current timestamp
+          required: false
+          type: string
+      responses:
+        200:
+          description: metrics
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/OrganizationMetrics'
+        401:
+          description: Unauthorized
+        404:
+          description: Organization not found
+        500:
+          description: Unexpected error
+  /api/v1/resources/cli/{resourceId}:
+    get:
+      parameters:
+        - in: path
+          name: resourceId
+          description: ID of the CLI resource to get
+          required: true
+          type: string
+      security:
+        - OauthSecurity: []
+      summary: Get binary of the requested CLI resource
+      responses:
+        200:
+          description: A binary of the requested CLI resource
+        401:
+          description: Unauthorized
+        404:
+          description: Not found
+        500:
+          description: Unexpected error
+
+definitions:
+  PlatformMetrics:
+    type: object
+    properties:
+      organizations_count:
+        type: integer
+      applications_count:
+        type: integer
+      service_instances_count:
+        type: integer
+      memory_usage:
+        type: integer
+      latest_eventes:
+        type: integer
+      nodes:
+        type: integer
+      components:
+        type: integer
+  OrganizationMetrics:
+    type: object
+    properties:
+      organization_id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      applications_running_count:
+        type: integer
+      applications_failed_count:
+        type: integer
+      services_count:
+        type: integer
+      services_usage_percentage:
+        type: integer
+      users_count:
+        type: string
+      memory_usage:
+        type: string
+      memory_usage_percentage:
+        type: integer
+      cpu_usage:
+        type: string
+      cpu_usage_percentage:
+        type: integer
+      public_datasets_count:
+        type: string
+      private_datasets_count:
+        type: string
+  Metric:
+    type: object
+    properties:
+      name:
+        type: string
+      values:
+        type: array
+        items:
+          $ref: '#/definitions/RawMetricValue'
+  RawMetricValue:
+    type: object
+    properties:
+      timestamp:
+        type: string
+      value:
+        type: object
+  ChangePasswordRequest:
+    type: object
+    properties:
+      new_password:
+        type: string
+      current_password:
+        type: string
+  User:
+    type: object
+    properties:
+      guid:
+        type: string
+      username:
+        type: string
+  Invitation:
+    type: object
+    properties:
+      email:
+        type: string
+  InstanceBindings:
+    type: object
+    properties:
+      resources:
+        type: array
+        items:
+          $ref: '#/definitions/InstanceBindingsResource'
+  InstanceBindingsResource:
+    type: object
+    properties:
+      entity:
+        $ref: '#/definitions/InstanceBindingEntity'
+  InstanceBindingEntity:
+    type: object
+    properties:
+      app_guid:
+        type: string
+      app_instance_name:
+        type: string
+      service_instance_guid:
+        type: string
+      service_instance_name:
+        type: string
+  InstanceBindingRequest:
+    type: object
+    description: Instance of service or application which is bound to. One of these fields is required.
+    properties:
+      application_id:
+        type: string
+      service_id:
+        type: string
+  ExposureRequest:
+    type: object
+    properties:
+      exposed:
+        type: boolean
+  LoginResponse:
+    type: object
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+      expires_in:
+        type: integer
+      scope:
+        type: string
+      jti:
+        type: string
+  PlatformInfo:
+    type: object
+    properties:
+      api_endpoint:
+        type: string
+      cli_version:
+        type: string
+      cli_url:
+        type: string
+      platform_version:
+        type: string
+      core_organization:
+        type: string
+      cdh_version:
+        type: string
+      k8s_version:
+        type: string
+      external_tools:
+        $ref: '#/definitions/ExternalTools'
+  ExternalTools:
+    type: object
+    properties:
+      visualizations:
+        type: array
+        items:
+          $ref: '#/definitions/Visualizations'
+  Visualizations:
+    type: object
+    properties:
+      name:
+        type: string
+      url:
+        type: string
+      available:
+        type: boolean
+  PlatformComponents:
+    type: object
+    properties:
+      name:
+        type: string
+      ImageVersions:
+        type: string
+      Signature:
+        type: string
+      AppVersion:
+        type: string
+  InstanceType:
+    type: string
+    enum: ["APPLICATION", "SERVICE", "SERVICE_BROKER"]
+  InstanceState:
+    type: string
+    enum: ["REQUESTED", "DEPLOYING", "FAILURE", "STOPPED", "START_REQ", "STARTING", "RUNNING", "STOP_REQ", "STOPPING", "DESTROY_REQ", "DESTROYING", "UNAVAILABLE"]
+  AuditTrail:
+    type: object
+    properties:
+      createdOn:
+        type: integer
+        format: int64
+      createdBy:
+        type: string
+      lastUpdatedOn:
+        type: integer
+        format: int64
+      lastUpdateBy:
+        type: string
+  InstanceDependency:
+    type: object
+    properties:
+      id:
+        type: string
+  Application:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+      imageId:
+        type: string
+      replication:
+        type: integer
+        format: int32
+      templateId:
+        type: string
+      instanceDependencies:
+        type: array
+        items:
+          $ref: '#/definitions/InstanceDependency'
+      metadata:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogMetadata'
+      auditTrail:
+        $ref: '#/definitions/AuditTrail'
+  CatalogInstanceBindings:
+    type: object
+    properties:
+      id:
+        type: string
+      data:
+        type: object
+        additionalProperties:
+          type: string
+  CatalogMetadata:
+    type: object
+    properties:
+      key:
+        type: string
+      value:
+        type: string
+  ImageType:
+    type: string
+    enum: ["JAVA", "GO", "NODEJS", "PYTHON2.7", "PYTHON3.4"]
+  Manifest:
+    type: object
+    properties:
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/ImageType'
+      instances:
+        type: integer
+      bindings:
+        type: array
+        items:
+          type: string
+      metadata:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogMetadata'
+  Metadata:
+    type: object
+    properties:
+      guid:
+        type: string
+  CatalogService:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+      bindable:
+        type: boolean
+      templateId:
+        type: string
+      state:
+        type: string
+      plans:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogServicePlan'
+      auditTrail:
+        $ref: '#/definitions/AuditTrail'
+      metadata:
+        $ref: '#/definitions/Metadata'
+  CatalogServicePlan:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+      cost:
+        type: string
+      dependencies:
+        $ref: '#/definitions/ServiceDependency'
+      auditTrail:
+        $ref: '#/definitions/AuditTrail'
+  ServiceDependency:
+    type: object
+    properties:
+      id:
+        type: string
+      plan_name:
+        type: string
+      plan_id:
+        type: string
+      service_name:
+        type: string
+      service_id:
+        type: string
+  ServiceInstance:
+    type: object
+    properties:
+#start of CatalogInstance nested object
+      id:
+        type: string
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/InstanceType'
+      offeringId:
+        type: string
+      bindings:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogInstanceBindings'
+      state:
+        $ref: '#/definitions/InstanceState'
+      metadata:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogMetadata'
+      auditTrail:
+        $ref: '#/definitions/AuditTrail'
+#end of Catalog Instance nested object
+      serviceName:
+        type: string
+      planName:
+        type: string
+  ServiceInstanceRequest:
+    type: object
+    properties:
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/InstanceType'
+      offeringId:
+        type: string
+      bindings:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogInstanceBindings'
+      metadata:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogMetadata'
+  ServiceDeploy:
+    type: object
+    properties:
+      broker_name:
+        type: string
+      template:
+        $ref: '#/definitions/Template'
+      services:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogService'
+  CreateOfferingFromApplicationRequest:
+    type: object
+    properties:
+      applicationId:
+        type: string
+      offeringName:
+        type: string
+      offeringDisplayName:
+        type: string
+      description:
+        type: string
+      tags:
+        type: array
+        items:
+          type: string
+  ImageState:
+    type: string
+    enum: ["PENDING", "BUILDING", "ERROR", "READY"]
+  ApplicationInstance:
+    type: object
+    properties:
+#start of Catalog Instance nested object
+      id:
+        type: string
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/InstanceType'
+      bindings:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogInstanceBindings'
+      state:
+        $ref: '#/definitions/InstanceState'
+      metadata:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogMetadata'
+      auditTrail:
+        $ref: '#/definitions/AuditTrail'
+#end of Catalog Instance nested object
+      replication:
+        type: integer
+        format: int32
+      imageState:
+        $ref: '#/definitions/ImageState'
+      urls:
+        type: array
+        items:
+          type: string
+      imageType:
+        $ref: '#/definitions/ImageType'
+      memory:
+        type: string
+      disk_quota:
+        type: string
+      running_instances:
+        type: integer
+        format: int32
+  MessageResponse:
+    type: object
+    properties:
+      Message:
+        type: string
+  ScaleApplicationRequest:
+    type: object
+    properties:
+      replicas:
+        type: integer
+  Offering:
+    type: object
+    properties:
+      name:
+        type: string
+      displayName:
+        type: string
+      provider:
+        type: string
+      url:
+        type: string
+      description:
+        type: string
+      version:
+        type: string
+      bindable:
+        type: boolean
+      id:
+        type: string
+      tags:
+        type: array
+        items:
+          type: string
+      state:
+        type: string
+      offeringPlans:
+        $ref: '#/definitions/OfferingPlan'
+      metadata:
+        type: array
+        items:
+          $ref: '#/definitions/CatalogMetadata'
+      broker_instance:
+        $ref: '#/definitions/ServiceInstance'
+  OfferingPlan:
+    type: object
+    properties:
+      name:
+        type: string
+      free:
+        type: boolean
+      description:
+        type: string
+      offeringId:
+        type: string
+      id:
+        type: string
+      active:
+        type: boolean
+  ContainerCredenials:
+    type: object
+    properties:
+      name:
+        type: string
+      envs:
+        type: object
+        additionalProperties:
+          type: string
+  Template:
+    type: object
+    properties:
+      id:
+        type: string
+      body:
+        type: array
+        items:
+          $ref: '#/definitions/KubernetesComponent'
+      hooks:
+        $ref: '#/definitions/v1beta1.JobList'
+  KubernetesComponent:
+    type: object
+    properties:
+      componentType:
+        $ref: '#/definitions/v1.ComponentType'
+      persistentVolumeClaims:
+        $ref: '#/definitions/v1.PersistentVolumeClaimList'
+      services:
+        $ref: '#/definitions/v1.ServiceList'
+      serviceAccounts:
+        $ref: '#/definitions/v1.ServiceAccountList'
+      secrets:
+        $ref: '#/definitions/v1.SecretList'
+      configMaps:
+        $ref: '#/definitions/v1.ConfigMapList'
+  v1.ObjectMeta:
+    type: object
+    properties:
+      name:
+        type: string
+      generateName:
+        type: string
+      namespace:
+        type: string
+      selfLink:
+        type: string
+      uid:
+        type: string
+      resourceVersion:
+        type: string
+      generation:
+        type: integer
+        format: int64
+      creationTimestamp:
+        type: string
+      deletionTimestamp:
+        type: string
+      deletionGracePeriodSeconds:
+        type: integer
+        format: int64
+      labels:
+        type: object
+      annotations:
+        type: object
+      ownerReferences:
+        type: array
+        items:
+          $ref: "#/definitions/v1.OwnerReference"
+      finalizers:
+        type: array
+        items:
+          type: string
+  v1.OwnerReference:
+    type: object
+    properties:
+      apiVersion:
+        type: string
+      kind:
+        type: string
+      name:
+        type: string
+      uid:
+        type: string
+      controller:
+        type: boolean
+  v1.ObjectReference:
+    type: object
+    properties:
+      kind:
+        type: string
+      namespace:
+        type: string
+      name:
+        type: string
+      uid:
+        type: string
+      apiVersion:
+        type: string
+      resourceVersion:
+        type: string
+      fieldPath:
+        type: string
+  unversioned.ListMeta:
+    type: object
+    properties:
+      selfLink:
+        type: string
+      resourceVersion:
+        type: string
+  v1.ComponentType:
+    type: string
+    enum: ["broker", "instance", "both"]
+  v1.PersistentVolumeClaimList:
+    type: object
+    properties:
+      kind:
+        type: string
+      apiVersion:
+        type: string
+      metadata:
+        $ref: "#/definitions/unversioned.ListMeta"
+      items:
+        type: array
+        items:
+          $ref: "#/definitions/v1.PersistentVolumeClaim"
+  v1.PersistentVolumeClaim:
+    type: object
+    properties:
+      kind:
+        type: string
+      apiVersion:
+        type: string
+      metadata:
+        $ref: "#/definitions/v1.ObjectMeta"
+      spec:
+        $ref: "#/definitions/v1.PersistentVolumeClaimSpec"
+      status:
+        $ref: "#/definitions/v1.PersistentVolumeClaimStatus"
+  v1.PersistentVolumeClaimSpec:
+    type: object
+    properties:
+      accessModes:
+        type: array
+        items:
+          $ref: "#/definitions/v1.PersistentVolumeAccessMode"
+      selector:
+          $ref: "#/definitions/unversioned.LabelSelector"
+      resources:
+          $ref: "#/definitions/v1.ResourceRequirements"
+      volumeName:
+          type: string
+  v1.PersistentVolumeAccessMode:
+    type: string
+  unversioned.LabelSelector:
+    type: object
+    properties:
+      matchLabels:
+        type: object
+      matchExpressions:
+        type: array
+        items:
+          $ref: "#/definitions/unversioned.LabelSelectorRequirement"
+  unversioned.LabelSelectorRequirement:
+    type: object
+    properties:
+      key:
+        type: string
+      operator:
+        type: string
+      values:
+        type: array
+        items:
+          type: string
+  v1.ResourceRequirements:
+    type: object
+    properties:
+      limits:
+          type: object
+      requests:
+          type: object
+  v1.PersistentVolumeClaimStatus:
+    type: object
+    properties:
+      phase:
+        type: string
+      accessModes:
+        type: array
+        items:
+          $ref: "#/definitions/v1.PersistentVolumeAccessMode"
+      capacity:
+          type: object
+  v1.GCEPersistentDiskVolumeSource:
+    type: object
+    required:
+    - "pdName"
+    properties:
+      pdName:
+        type: "string"
+      fsType:
+        type: "string"
+      partition:
+        type: "integer"
+        format: "int32"
+      readOnly:
+        type: "boolean"
+  v1.AWSElasticBlockStoreVolumeSource:
+    type: object
+    properties:
+      volumeID:
+        type: "string"
+      fsType:
+        type: "string"
+      partition:
+        type: "integer"
+        format: "int32"
+      readOnly:
+        type: "boolean"
+  v1.HostPathVolumeSource:
+    type: object
+    properties:
+      path:
+        type: "string"
+  v1.GlusterfsVolumeSource:
+    type: object
+    properties:
+      endpoints:
+        type: "string"
+      path:
+        type: "string"
+      readOnly:
+        type: "boolean"
+  v1.NFSVolumeSource:
+    type: object
+    properties:
+      server:
+        type: "string"
+      path:
+        type: "string"
+      readOnly:
+        type: "boolean"
+  v1.RBDVolumeSource:
+    type: object
+    properties:
+      monitors:
+        type: "array"
+        items:
+          type: "string"
+      image:
+        type: "string"
+      fsType:
+        type: "string"
+      pool:
+        type: "string"
+      user:
+        type: "string"
+      keyring:
+        type: "string"
+      secretRef:
+        $ref: "#/definitions/v1.LocalObjectReference"
+      readOnly:
+        type: "boolean"
+  v1.LocalObjectReference:
+    type: object
+    properties:
+      name:
+        type: "string"
+  v1.ISCSIVolumeSource:
+    type: object
+    properties:
+      targetPortal:
+        type: "string"
+      iqn:
+        type: "string"
+      lun:
+        type: "integer"
+        format: "int32"
+      iscsiInterface:
+        type: "string"
+      fsType:
+        type: "string"
+      readOnly:
+        type: "boolean"
+  v1.CinderVolumeSource:
+    type: object
+    properties:
+      volumeID:
+        type: "string"
+      fsType:
+        type: "string"
+      readOnly:
+        type: "boolean"
+  v1.CephFSVolumeSource:
+    type: object
+    properties:
+      monitors:
+        type: "array"
+        items:
+          type: "string"
+      path:
+        type: "string"
+      user:
+        type: "string"
+      secretFile:
+        type: "string"
+      secretRef:
+        $ref: "#/definitions/v1.LocalObjectReference"
+      readOnly:
+        type: "boolean"
+  v1.FCVolumeSource:
+    type: object
+    properties:
+      targetWWNs:
+        type: "array"
+        items:
+          type: "string"
+      lun:
+        type: "integer"
+        format: "int32"
+      fsType:
+        type: "string"
+      readOnly:
+        type: "boolean"
+  v1.FlockerVolumeSource:
+    type: object
+    properties:
+      datasetName:
+        type: "string"
+  v1.FlexVolumeSource:
+    type: object
+    properties:
+      driver:
+        type: "string"
+      fsType:
+        type: "string"
+      secretRef:
+        $ref: "#/definitions/v1.LocalObjectReference"
+      readOnly:
+        type: "boolean"
+      options:
+        type: "object"
+  v1.AzureFileVolumeSource:
+    type: object
+    properties:
+      secretName:
+        type: "string"
+      shareName:
+        type: "string"
+      readOnly:
+        type: "boolean"
+  v1.VsphereVirtualDiskVolumeSource:
+    type: object
+    properties:
+      volumePath:
+        type: "string"
+      fsType:
+        type: "string"
+  v1.PodSpec:
+    type: object
+    properties:
+      volumes:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.Volume"
+      containers:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.Container"
+      restartPolicy:
+        type: "string"
+      terminationGracePeriodSeconds:
+        type: "integer"
+        format: "int64"
+      activeDeadlineSeconds:
+        type: "integer"
+        format: "int64"
+      dnsPolicy:
+        type: "string"
+      nodeSelector:
+        type: "object"
+      serviceAccountName:
+        type: "string"
+      serviceAccount:
+        type: "string"
+      nodeName:
+        type: "string"
+      hostNetwork:
+        type: "boolean"
+      hostPID:
+        type: "boolean"
+      hostIPC:
+        type: "boolean"
+      securityContext:
+        $ref: "#/definitions/v1.PodSecurityContext"
+      imagePullSecrets:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.LocalObjectReference"
+      hostname:
+        type: "string"
+      subdomain:
+        type: "string"
+  v1.Volume:
+    type: object
+    properties:
+      name:
+        type: "string"
+      hostPath:
+        $ref: "#/definitions/v1.HostPathVolumeSource"
+      emptyDir:
+        $ref: "#/definitions/v1.EmptyDirVolumeSource"
+      gcePersistentDisk:
+        $ref: "#/definitions/v1.GCEPersistentDiskVolumeSource"
+      awsElasticBlockStore:
+        $ref: "#/definitions/v1.AWSElasticBlockStoreVolumeSource"
+      gitRepo:
+        $ref: "#/definitions/v1.GitRepoVolumeSource"
+      secret:
+        $ref: "#/definitions/v1.SecretVolumeSource"
+      nfs:
+        $ref: "#/definitions/v1.NFSVolumeSource"
+      iscsi:
+        $ref: "#/definitions/v1.ISCSIVolumeSource"
+      glusterfs:
+        $ref: "#/definitions/v1.GlusterfsVolumeSource"
+      persistentVolumeClaim:
+        $ref: "#/definitions/v1.PersistentVolumeClaimVolumeSource"
+      rbd:
+        $ref: "#/definitions/v1.RBDVolumeSource"
+      flexVolume:
+        $ref: "#/definitions/v1.FlexVolumeSource"
+      cinder:
+        $ref: "#/definitions/v1.CinderVolumeSource"
+      cephfs:
+        $ref: "#/definitions/v1.CephFSVolumeSource"
+      flocker:
+        $ref: "#/definitions/v1.FlockerVolumeSource"
+      downwardAPI:
+        $ref: "#/definitions/v1.DownwardAPIVolumeSource"
+      fc:
+        $ref: "#/definitions/v1.FCVolumeSource"
+      azureFile:
+        $ref: "#/definitions/v1.AzureFileVolumeSource"
+      configMap:
+        $ref: "#/definitions/v1.ConfigMapVolumeSource"
+      vsphereVolume:
+        $ref: "#/definitions/v1.VsphereVirtualDiskVolumeSource"
+  v1.EmptyDirVolumeSource:
+    type: object
+    properties:
+      medium:
+        type: "string"
+  v1.GitRepoVolumeSource:
+    type: object
+    required:
+    - "repository"
+    properties:
+      repository:
+        type: "string"
+      revision:
+        type: "string"
+      directory:
+        type: "string"
+  v1.SecretVolumeSource:
+    type: object
+    properties:
+      secretName:
+        type: "string"
+      items:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.KeyToPath"
+  v1.KeyToPath:
+    type: object
+    properties:
+      key:
+        type: "string"
+      path:
+        type: "string"
+  v1.PersistentVolumeClaimVolumeSource:
+    type: object
+    properties:
+      claimName:
+        type: "string"
+      readOnly:
+        type: "boolean"
+  v1.DownwardAPIVolumeSource:
+    type: object
+    properties:
+      items:
+        type: "array"
+        items:
+         $ref: "#/definitions/v1.DownwardAPIVolumeFile"
+  v1.DownwardAPIVolumeFile:
+    type: object
+    properties:
+      path:
+        type: "string"
+      fieldRef:
+        $ref: "#/definitions/v1.ObjectFieldSelector"
+      resourceFieldRef:
+        $ref: "#/definitions/v1.ResourceFieldSelector"
+  v1.ObjectFieldSelector:
+    type: object
+    properties:
+      apiVersion:
+        type: "string"
+      fieldPath:
+        type: "string"
+  v1.ResourceFieldSelector:
+    type: object
+    properties:
+      containerName:
+        type: "string"
+      resource:
+        type: "string"
+      divisor:
+        type: "string"
+  v1.ConfigMapVolumeSource:
+    type: object
+    properties:
+      name:
+        type: "string"
+      items:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.KeyToPath"
+  v1.Container:
+    type: object
+    required:
+    - "name"
+    properties:
+      name:
+        type: "string"
+      image:
+        type: "string"
+      command:
+        type: "array"
+        items:
+          type: "string"
+      args:
+        type: "array"
+        items:
+          type: "string"
+      workingDir:
+        type: "string"
+      ports:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.ContainerPort"
+      env:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.EnvVar"
+      resources:
+        $ref: "#/definitions/v1.ResourceRequirements"
+      volumeMounts:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.VolumeMount"
+      livenessProbe:
+        $ref: "#/definitions/v1.Probe"
+      readinessProbe:
+        $ref: "#/definitions/v1.Probe"
+      lifecycle:
+        $ref: "#/definitions/v1.Lifecycle"
+      terminationMessagePath:
+        type: "string"
+      imagePullPolicy:
+        type: "string"
+      securityContext:
+        $ref: "#/definitions/v1.SecurityContext"
+      stdin:
+        type: "boolean"
+      stdinOnce:
+        type: "boolean"
+      tty:
+        type: "boolean"
+  v1.ContainerPort:
+    type: object
+    properties:
+      name:
+        type: "string"
+      hostPort:
+        type: "integer"
+        format: "int32"
+      containerPort:
+        type: "integer"
+        format: "int32"
+      protocol:
+        type: "string"
+      hostIP:
+        type: "string"
+  v1.EnvVar:
+    type: object
+    properties:
+      name:
+        type: "string"
+      value:
+        type: "string"
+      valueFrom:
+        $ref: "#/definitions/v1.EnvVarSource"
+  v1.EnvVarSource:
+    type: object
+    properties:
+      fieldRef:
+        $ref: "#/definitions/v1.ObjectFieldSelector"
+      resourceFieldRef:
+        $ref: "#/definitions/v1.ResourceFieldSelector"
+      configMapKeyRef:
+        $ref: "#/definitions/v1.ConfigMapKeySelector"
+      secretKeyRef:
+        $ref: "#/definitions/v1.SecretKeySelector"
+  v1.ConfigMapKeySelector:
+    type: object
+    properties:
+      name:
+        type: "string"
+      key:
+        type: "string"
+  v1.SecretKeySelector:
+    type: object
+    properties:
+      name:
+        type: "string"
+      key:
+        type: "string"
+  v1.VolumeMount:
+    type: object
+    properties:
+      name:
+        type: "string"
+      readOnly:
+        type: "boolean"
+      mountPath:
+        type: "string"
+      subPath:
+        type: "string"
+  v1.Probe:
+    type: object
+    properties:
+      exec:
+        $ref: "#/definitions/v1.ExecAction"
+      httpGet:
+        $ref: "#/definitions/v1.HTTPGetAction"
+      tcpSocket:
+        $ref: "#/definitions/v1.TCPSocketAction"
+      initialDelaySeconds:
+        type: "integer"
+        format: "int32"
+      timeoutSeconds:
+        type: "integer"
+        format: "int32"
+      periodSeconds:
+        type: "integer"
+        format: "int32"
+      successThreshold:
+        type: "integer"
+        format: "int32"
+      failureThreshold:
+        type: "integer"
+        format: "int32"
+  v1.ExecAction:
+    type: object
+    properties:
+      command:
+        type: "array"
+        items:
+          type: "string"
+  v1.HTTPGetAction:
+    type: object
+    properties:
+      path:
+        type: "string"
+      port:
+        type: "string"
+      host:
+        type: "string"
+      scheme:
+        type: "string"
+      httpHeaders:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.HTTPHeader"
+  v1.HTTPHeader:
+    type: object
+    properties:
+      name:
+        type: "string"
+      value:
+        type: "string"
+  v1.TCPSocketAction:
+    type: object
+    properties:
+      port:
+        type: "string"
+  v1.Lifecycle:
+    type: object
+    properties:
+      postStart:
+        $ref: "#/definitions/v1.Handler"
+      preStop:
+        $ref: "#/definitions/v1.Handler"
+  v1.Handler:
+    type: object
+    properties:
+      exec:
+        $ref: "#/definitions/v1.ExecAction"
+      httpGet:
+        $ref: "#/definitions/v1.HTTPGetAction"
+      tcpSocket:
+        $ref: "#/definitions/v1.TCPSocketAction"
+  v1.SecurityContext:
+    type: object
+    properties:
+      capabilities:
+        $ref: "#/definitions/v1.Capabilities"
+      privileged:
+        type: "boolean"
+      seLinuxOptions:
+        $ref: "#/definitions/v1.SELinuxOptions"
+      runAsUser:
+        type: "integer"
+        format: "int64"
+      runAsNonRoot:
+        type: "boolean"
+      readOnlyRootFilesystem:
+        type: "boolean"
+  v1.Capabilities:
+    type: object
+    properties:
+      add:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.Capability"
+      drop:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.Capability"
+  v1.Capability:
+    type: object
+    properties: {}
+  v1.SELinuxOptions:
+    type: object
+    properties:
+      user:
+        type: "string"
+      role:
+        type: "string"
+      type:
+        type: "string"
+      level:
+        type: "string"
+  v1.PodSecurityContext:
+    type: object
+    properties:
+      seLinuxOptions:
+        $ref: "#/definitions/v1.SELinuxOptions"
+      runAsUser:
+        type: "integer"
+        format: "int64"
+      runAsNonRoot:
+        type: "boolean"
+      supplementalGroups:
+        type: "array"
+        items:
+          type: "integer"
+      fsGroup:
+        type: "integer"
+        format: "int64"
+  v1.PodTemplateSpec:
+    type: object
+    properties:
+      metadata:
+        $ref: "#/definitions/v1.ObjectMeta"
+      spec:
+        $ref: "#/definitions/v1.PodSpec"
+  v1.SecretList:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/unversioned.ListMeta"
+      items:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.Secret"
+  v1.Secret:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/v1.ObjectMeta"
+      data:
+        type: "object"
+      type:
+        type: "string"
+  v1.ConfigMapList:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/unversioned.ListMeta"
+      items:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.ConfigMap"
+  v1.ConfigMap:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/v1.ObjectMeta"
+      data:
+        type: "object"
+  v1.ServiceAccountList:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/unversioned.ListMeta"
+      items:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.ServiceAccount"
+  v1.ServiceAccount:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/v1.ObjectMeta"
+      secrets:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.ObjectReference"
+      imagePullSecrets:
+          type: "array"
+          items:
+            $ref: "#/definitions/v1.LocalObjectReference"
+  v1.ServiceList:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/unversioned.ListMeta"
+      items:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.Service"
+  v1.Service:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/v1.ObjectMeta"
+      spec:
+        $ref: "#/definitions/v1.ServiceSpec"
+      status:
+        $ref: "#/definitions/v1.ServiceStatus"
+  v1.ServiceSpec:
+    type: object
+    properties:
+      ports:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.ServicePort"
+      selector:
+        type: "object"
+      clusterIP:
+        type: "string"
+      type:
+        type: "string"
+      externalIPs:
+        type: "array"
+        items:
+          type: "string"
+      deprecatedPublicIPs:
+        type: "array"
+        items:
+          type: "string"
+      sessionAffinity:
+        type: "string"
+      loadBalancerIP:
+        type: "string"
+      loadBalancerSourceRanges:
+        type: "array"
+        items:
+          type: "string"
+  v1.ServicePort:
+    type: object
+    properties:
+      name:
+        type: "string"
+      protocol:
+        type: "string"
+      port:
+        type: "integer"
+        format: "int32"
+      targetPort:
+        type: "string"
+      nodePort:
+        type: "integer"
+        format: "int32"
+  v1.ServiceStatus:
+    type: object
+    properties:
+      loadBalancer:
+        $ref: "#/definitions/v1.LoadBalancerStatus"
+  v1.LoadBalancerStatus:
+    type: object
+    properties:
+      ingress:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1.LoadBalancerIngress"
+  v1.LoadBalancerIngress:
+    type: object
+    properties:
+      ip:
+        type: "string"
+      hostname:
+        type: "string"
+  v1beta1.JobList:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/unversioned.ListMeta"
+      items:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1beta1.Job"
+  v1beta1.Job:
+    type: object
+    properties:
+      kind:
+        type: "string"
+      apiVersion:
+        type: "string"
+      metadata:
+        $ref: "#/definitions/v1.ObjectMeta"
+      spec:
+        $ref: "#/definitions/v1beta1.JobSpec"
+      status:
+        $ref: "#/definitions/v1beta1.JobStatus"
+  v1beta1.JobSpec:
+    type: object
+    properties:
+      parallelism:
+        type: "integer"
+        format: "int32"
+      completions:
+        type: "integer"
+        format: "int32"
+      activeDeadlineSeconds:
+        type: "integer"
+        format: "int64"
+      selector:
+        $ref: "#/definitions/unversioned.LabelSelector"
+      autoSelector:
+        type: "boolean"
+      template:
+        $ref: "#/definitions/v1.PodTemplateSpec"
+  v1beta1.JobStatus:
+    type: object
+    properties:
+      conditions:
+        type: "array"
+        items:
+          $ref: "#/definitions/v1beta1.JobCondition"
+      startTime:
+        type: "string"
+      completionTime:
+        type: "string"
+      active:
+        type: "integer"
+        format: "int32"
+      succeeded:
+        type: "integer"
+        format: "int32"
+      failed:
+        type: "integer"
+        format: "int32"
+  v1beta1.JobCondition:
+    type: object
+    properties:
+      type:
+        type: "string"
+      status:
+        type: "string"
+      lastProbeTime:
+        type: "string"
+      lastTransitionTime:
+        type: "string"
+      reason:
+        type: "string"
+      message:
+        type: "string"

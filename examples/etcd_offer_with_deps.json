@@ -1,0 +1,185 @@
+{
+  "template": {
+    "body": [{
+      "componentType": "instance",
+      "persistentVolumeClaims": null,
+      "deployments": [
+        {
+          "kind": "Deployment",
+          "apiVersion": "extensions/v1beta1",
+          "metadata": {
+            "name": "$idx_and_short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "plan_id": "$plan_id",
+              "offering_id": "$offering_id",
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "spec": {
+            "replicas": 1,
+            "selector": {
+              "matchLabels": {
+                "idx_and_short_instance_id": "$idx_and_short_instance_id",
+                "instance_id": "$instance_id"
+              }
+            },
+            "template": {
+              "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                  "idx_and_short_instance_id": "$idx_and_short_instance_id",
+                  "managed_by": "TAP",
+                  "instance_id": "$instance_id"
+                }
+              },
+              "spec": {
+                "volumes": null,
+                "containers": [
+                  {
+                    "name": "k-etcd",
+                    "image": "$repository_uri/coreos/etcd:v3.0.10",
+                    "ports": [
+                      {
+                        "containerPort": 4001,
+                        "protocol": "TCP"
+                      },
+                      {
+                        "containerPort": 7001,
+                        "protocol": "TCP"
+                      }
+                    ],
+                    "env": [
+                      {
+                        "name": "MANAGED_BY",
+                        "value": "TAP"
+                      }
+                    ],
+                    "resources": {
+                      "limits": {
+                        "memory": "500M"
+                      },
+                      "requests": {
+                        "memory": "100M"
+                      }
+                    },
+                    "imagePullPolicy": "IfNotPresent"
+                  }
+                ],
+                "restartPolicy": "Always",
+                "dnsPolicy": "ClusterFirst",
+                "serviceAccountName": ""
+              }
+            },
+            "strategy": {
+
+            }
+          },
+          "status": {
+
+          }
+        }
+      ],
+      "ingresses": null,
+      "services": [
+        {
+          "kind": "Service",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$idx_and_short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "plan_id": "$plan_id",
+              "offering_id": "$offering_id",
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "spec": {
+            "type": "NodePort",
+            "ports": [
+              {
+                "name": "rest",
+                "protocol": "TCP",
+                "port": 4001,
+                "targetPort": 0,
+                "nodePort": 0
+              },
+              {
+                "name": "transport",
+                "protocol": "TCP",
+                "port": 7001,
+                "targetPort": 0,
+                "nodePort": 0
+              }
+            ],
+            "selector": {
+              "instance_id": "$instance_id"
+            }
+          },
+          "status": {
+            "loadBalancer": {
+
+            }
+          }
+        }
+      ],
+      "serviceAccounts": [
+        {
+          "kind": "ServiceAccount",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$idx_and_short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "plan_id": "$plan_id",
+              "offering_id": "$offering_id",
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "secrets": null
+        }
+      ],
+      "secrets": null
+    }],
+    "hooks": null
+  },
+  "services": [{
+    "name": "etcd",
+    "description": "Etcd key-value storage",
+    "metadata": [],
+    "bindable": true,
+    "tags": [
+      "etcd",
+      "keyvalue",
+      "etcd-0.4.6",
+      "k8s"
+    ],
+    "plans": [
+      {
+        "name": "free",
+        "description": "free",
+        "cost": "free",
+        "dependencies": [
+          {
+            "service_id": "real_service_id",
+            "service_name": "logstash-service",
+            "plan_id": "real_plan_id",
+            "plan_name": "free"
+          }
+        ]
+      }
+    ]
+  }]
+}

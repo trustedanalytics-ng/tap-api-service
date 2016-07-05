@@ -1,0 +1,8 @@
+{
+  "type": "PYTHON",
+  "name": "sample",
+  "instances": 1,
+  "metadata":[
+    {"key": "EXTRA_ENV", "value": "example"}
+  ]
+}

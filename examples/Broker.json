@@ -1,0 +1,480 @@
+{
+  "broker_name": "example-broker",
+  "template": {
+    "body": [{
+      "componentType": "broker",
+      "persistentVolumeClaims": null,
+      "deployments": [
+        {
+          "kind": "Deployment",
+          "apiVersion": "extensions/v1beta1",
+          "metadata": {
+            "name": "$short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "short_instance_id": "$short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "spec": {
+            "replicas": 1,
+            "selector": {
+              "matchLabels": {
+                "managed_by": "TAP",
+                "short_instance_id": "$short_instance_id",
+                "instance_id": "$instance_id"
+              }
+            },
+            "template": {
+              "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                  "short_instance_id": "$short_instance_id",
+                  "managed_by": "TAP",
+                  "instance_id": "$instance_id"
+                }
+              },
+              "spec": {
+                "volumes": null,
+                "containers": [
+                  {
+                    "name": "fake-broker",
+                    "image": "$repository_uri/fake-broker",
+                    "ports": [
+                      {
+                        "containerPort": 80,
+                        "protocol": "TCP"
+                      }
+                    ],
+                    "env": [
+                      {
+                        "name": "PORT",
+                        "value": "80"
+                      },
+                      {
+                        "name": "USERNAME",
+                        "valueFrom": {
+                          "secretKeyRef": {
+                            "Name": "$short_instance_id-broker-credentials",
+                            "key": "username"
+                          }
+                        }
+                      },
+                      {
+                        "name": "PASSWORD",
+                        "valueFrom": {
+                          "secretKeyRef": {
+                            "Name": "$short_instance_id-broker-credentials",
+                            "key": "password"
+                          }
+                        }
+                      },
+                      {
+                        "name": "MANAGED_BY",
+                        "value": "TAP"
+                      }
+                    ],
+                    "resources": {},
+                    "imagePullPolicy": "IfNotPresent"
+                  }
+                ],
+                "restartPolicy": "Always",
+                "dnsPolicy": "ClusterFirst",
+                "serviceAccountName": ""
+              }
+            },
+            "strategy": {}
+          },
+          "status": {}
+        }
+      ],
+      "services": [
+        {
+          "kind": "Service",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "short_instance_id": "$short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "spec": {
+            "type": "NodePort",
+            "ports": [
+              {
+                "name": "broker",
+                "protocol": "TCP",
+                "port": 80,
+                "targetPort": 0,
+                "nodePort": 0
+              }
+            ],
+            "selector": {
+              "instance_id": "$instance_id"
+            }
+          },
+          "status": {
+            "loadBalancer": {}
+          }
+        }
+      ],
+      "serviceAccounts": [
+        {
+          "kind": "ServiceAccount",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "short_instance_id": "$short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "secrets": null
+        }
+      ],
+      "secrets": [
+        {
+          "kind": "Secret",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$short_instance_id-broker-credentials",
+            "creationTimestamp": null,
+            "labels": {
+              "short_instance_id": "$short_instance_id",
+              "managed_by": "TAP",
+              "instance_id": "$instance_id"
+            }
+          },
+          "data": {
+            "password": "$base64-$random1",
+            "username": "$base64-$random2"
+          }
+        }
+      ]
+    }],
+    "hooks": {
+      "provision": {
+        "kind": "Pod",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "$short_instance_id-provision-$random_dns1",
+          "creationTimestamp": null,
+          "labels": {
+            "managed_by": "TAP",
+            "instance_id": "$instance_id"
+          }
+        },
+        "spec": {
+          "volumes": null,
+          "containers": [
+            {
+              "name": "$short_instance_id-provision",
+              "image": "$repository_uri/tap-base-cf-broker-connector:curl-latest",
+              "env": [
+                {
+                  "name": "ACTION",
+                  "value": "CREATE_AND_BIND"
+                },
+                {
+                  "name": "BROKER_SERVICE_NAME",
+                  "value": "$broker_short_instance_id"
+                },
+                {
+                  "name": "CREATE_BODY",
+                  "value": "{\"plan_id\": \"$plan_id\", \"service_id\": \"$offering_id\", \"organization_guid\": \"$org\", \"space_guid\":\"$space\", \"parameters\": \"$extra_envs\"}"
+                },
+                {
+                  "name": "CREATE_EXPECTED_CODE",
+                  "value": "201"
+                },
+                {
+                  "name": "CREATE_URL",
+                  "value": "/v2/service_instances/$instance_id"
+                },
+                {
+                  "name": "BIND_BODY",
+                  "value": "{\"plan_id\": \"$plan_id\", \"service_id\": \"$offering_id\", \"organization_guid\": \"$org\", \"space_guid\":\"$space\", \"app_guid\": \"fake_provision_guid\", \"parameters\": \"$extra_envs\"}"
+                },
+                {
+                  "name": "BIND_EXPECTED_CODE",
+                  "value": "201"
+                },
+                {
+                  "name": "BIND_URL",
+                  "value": "/v2/service_instances/$instance_id/service_bindings/$short_instance_idfake_provision_guid"
+                },
+                {
+                  "name": "UNBIND_EXPECTED_CODE",
+                  "value": "200"
+                },
+                {
+                  "name": "UNBIND_URL",
+                  "value": "/v2/service_instances/$instance_id/service_bindings/$short_instance_idfake_provision_guid?service_id=$offering_id&plan_id=$plan_id"
+                },
+                {
+                  "name": "BROKER_USERNAME",
+                  "valueFrom": {
+                    "secretKeyRef": {
+                      "Name": "$broker_short_instance_id-broker-credentials",
+                      "key": "username"
+                    }
+                  }
+                },
+                {
+                  "name": "BROKER_PASSWORD",
+                  "valueFrom": {
+                    "secretKeyRef": {
+                      "Name": "$broker_short_instance_id-broker-credentials",
+                      "key": "password"
+                    }
+                  }
+                }
+              ],
+              "resources": {},
+              "imagePullPolicy": "IfNotPresent"
+            }
+          ],
+          "restartPolicy": "Never",
+          "dnsPolicy": "ClusterFirst",
+          "serviceAccountName": ""
+        }
+      },
+      "bind": {
+        "kind": "Pod",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "$short_instance_id-bind-$random_dns1",
+          "creationTimestamp": null,
+          "labels": {
+            "managed_by": "TAP",
+            "instance_id": "$instance_id"
+          }
+        },
+        "spec": {
+          "volumes": null,
+          "containers": [
+            {
+              "name": "$short_instance_id-bind",
+              "image": "$repository_uri/tap-base-cf-broker-connector:curl-latest",
+              "env": [
+                {
+                  "name": "ACTION",
+                  "value": "BIND"
+                },
+                {
+                  "name": "BROKER_SERVICE_NAME",
+                  "value": "$broker_short_instance_id"
+                },
+                {
+                  "name": "BODY",
+                  "value": "{\"plan_id\": \"$plan_id\", \"service_id\": \"$offering_id\", \"organization_guid\": \"$org\", \"space_guid\":\"$space\", \"app_guid\": \"$bound_instance_id\", \"parameters\": \"$extra_envs\"}"
+                },
+                {
+                  "name": "EXPECTED_CODE",
+                  "value": "201"
+                },
+                {
+                  "name": "URL",
+                  "value": "/v2/service_instances/$instance_id/service_bindings/$short_instance_id$bound_instance_id"
+                },
+                {
+                  "name": "BROKER_USERNAME",
+                  "valueFrom": {
+                    "secretKeyRef": {
+                      "Name": "$broker_short_instance_id-broker-credentials",
+                      "key": "username"
+                    }
+                  }
+                },
+                {
+                  "name": "BROKER_PASSWORD",
+                  "valueFrom": {
+                    "secretKeyRef": {
+                      "Name": "$broker_short_instance_id-broker-credentials",
+                      "key": "password"
+                    }
+                  }
+                }
+              ],
+              "resources": {},
+              "imagePullPolicy": "IfNotPresent"
+            }
+          ],
+          "restartPolicy": "Never",
+          "dnsPolicy": "ClusterFirst",
+          "serviceAccountName": ""
+        }
+      },
+      "unbind": {
+        "kind": "Pod",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "$short_instance_id-unbind-$random_dns1",
+          "creationTimestamp": null,
+          "labels": {
+            "managed_by": "TAP",
+            "instance_id": "$instance_id"
+          }
+        },
+        "spec": {
+          "volumes": null,
+          "containers": [
+            {
+              "name": "$short_instance_id-unbind",
+              "image": "$repository_uri/tap-base-cf-broker-connector:curl-latest",
+              "env": [
+                {
+                  "name": "ACTION",
+                  "value": "UNBIND"
+                },
+                {
+                  "name": "BROKER_SERVICE_NAME",
+                  "value": "$broker_short_instance_id"
+                },
+                {
+                  "name": "EXPECTED_CODE",
+                  "value": "200"
+                },
+                {
+                  "name": "URL",
+                  "value": "/v2/service_instances/$instance_id/service_bindings/$short_instance_id$bound_instance_id?service_id=$offering_id&plan_id=$plan_id"
+                },
+                {
+                  "name": "BROKER_USERNAME",
+                  "valueFrom": {
+                    "secretKeyRef": {
+                      "Name": "$broker_short_instance_id-broker-credentials",
+                      "key": "username"
+                    }
+                  }
+                },
+                {
+                  "name": "BROKER_PASSWORD",
+                  "valueFrom": {
+                    "secretKeyRef": {
+                      "Name": "$broker_short_instance_id-broker-credentials",
+                      "key": "password"
+                    }
+                  }
+                }
+              ],
+              "resources": {},
+              "imagePullPolicy": "IfNotPresent"
+            }
+          ],
+          "restartPolicy": "Never",
+          "dnsPolicy": "ClusterFirst",
+          "serviceAccountName": ""
+        }
+      },
+      "deprovision": {
+        "kind": "Pod",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "$short_instance_id-deprovision-$random_dns1",
+          "creationTimestamp": null,
+          "labels": {
+            "managed_by": "TAP",
+            "instance_id": "$instance_id"
+          }
+        },
+        "spec": {
+          "volumes": null,
+          "containers": [
+            {
+              "name": "$short_instance_id-deprovision",
+              "image": "$repository_uri/tap-base-cf-broker-connector:curl-latest",
+              "env": [
+                {
+                  "name": "ACTION",
+                  "value": "DELETE"
+                },
+                {
+                  "name": "BROKER_SERVICE_NAME",
+                  "value": "$broker_short_instance_id"
+                },
+                {
+                  "name": "EXPECTED_CODE",
+                  "value": "200"
+                },
+                {
+                  "name": "URL",
+                  "value": "/v2/service_instances/$instance_id?service_id=$offering_id&plan_id=$plan_id"
+                },
+                {
+                  "name": "BROKER_USERNAME",
+                  "valueFrom": {
+                    "secretKeyRef": {
+                      "Name": "$broker_short_instance_id-broker-credentials",
+                      "key": "username"
+                    }
+                  }
+                },
+                {
+                  "name": "BROKER_PASSWORD",
+                  "valueFrom": {
+                    "secretKeyRef": {
+                      "Name": "$broker_short_instance_id-broker-credentials",
+                      "key": "password"
+                    }
+                  }
+                }
+              ],
+              "resources": {},
+              "imagePullPolicy": "IfNotPresent"
+            }
+          ],
+          "restartPolicy": "Never",
+          "dnsPolicy": "ClusterFirst",
+          "serviceAccountName": ""
+        }
+      }
+    }
+  },
+  "services": [
+    {
+      "name": "example-broker-offering",
+      "description": "Example service for service broker",
+      "metadata": [
+        {
+          "key": "source_offering_id",
+          "value": "5309f7ba-16a7-11e6-8fcf-00155d3d8807"
+        },
+        {
+          "key": "source_plan_id-free",
+          "value": "5309f7ba-16a7-11e6-8fcf-00155d3d8803"
+        },
+        {
+          "key": "source_plan_id-paid",
+          "value": "5309f7ba-16a7-11e6-8fcf-00155d3d8806"
+        }
+      ],
+      "bindable": true,
+      "tags": [],
+      "plans": [
+        {
+          "name": "free",
+          "description": "free",
+          "cost": "free"
+        },
+        {
+          "name": "paid",
+          "description": "paid",
+          "cost": "free"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+.idea
+application/
+temp/
+*.iml
+tap-api-service
+/resources
+

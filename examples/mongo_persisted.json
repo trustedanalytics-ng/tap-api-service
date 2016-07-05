@@ -1,0 +1,220 @@
+{
+  "template": {
+    "body": [{
+      "componentType": "instance",
+      "persistentVolumeClaims": null,
+      "deployments": [
+        {
+          "kind": "Deployment",
+          "apiVersion": "extensions/v1beta1",
+          "metadata": {
+            "name": "$idx_and_short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "plan_id": "$plan_id",
+              "offering_id": "$offering_id",
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "spec": {
+            "replicas": 1,
+            "selector": {
+              "matchLabels": {
+                "idx_and_short_instance_id": "$idx_and_short_instance_id",
+                "instance_id": "$instance_id"
+              }
+            },
+            "template": {
+              "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                  "idx_and_short_instance_id": "$idx_and_short_instance_id",
+                  "managed_by": "TAP",
+                  "instance_id": "$instance_id"
+                },
+                "annotations":{
+                  "volume_read_only": "false",
+                  "volume_size_mb": "2400",
+                  "volume_name": "mongo-persistent-storage"
+                }
+              },
+              "spec": {
+                "volumes": [],
+                "containers": [
+                  {
+                    "name": "mongodb3312",
+                    "image": "$repository_uri/mongo:3.3.12",
+                    "ports": [
+                      {
+                        "containerPort": 27017,
+                        "protocol": "TCP"
+                      },
+                      {
+                        "containerPort": 28017,
+                        "protocol": "TCP"
+                      }
+                    ],
+                    "volumeMounts": [
+                      {
+                        "name": "mongo-persistent-storage",
+                        "mountPath": "/data/db"
+                      }
+                    ],
+                    "env": [
+                      {
+                        "name": "MONGODB_USERNAME",
+                        "valueFrom": {
+                          "secretKeyRef": {
+                            "Name": "$short_instance_id-mongodb3-credentials",
+                            "key": "mongodb-username"
+                          }
+                        }
+                      },
+                      {
+                        "name": "MONGODB_PASSWORD",
+                        "valueFrom": {
+                          "secretKeyRef": {
+                            "Name": "$short_instance_id-mongodb3-credentials",
+                            "key": "mongodb-password"
+                          }
+                        }
+                      },
+                      {
+                        "name": "MONGODB_DBNAME",
+                        "valueFrom": {
+                          "secretKeyRef": {
+                            "Name": "$short_instance_id-mongodb3-credentials",
+                            "key": "mongodb-dbname"
+                          }
+                        }
+                      },
+                      {
+                        "name": "MANAGED_BY",
+                        "value": "TAP"
+                      }
+                    ],
+                    "resources": {},
+                    "imagePullPolicy": "IfNotPresent"
+                  }
+                ],
+                "restartPolicy": "Always",
+                "dnsPolicy": "ClusterFirst",
+                "serviceAccountName": ""
+              }
+            },
+            "strategy": {}
+          },
+          "status": {}
+        }
+      ],
+      "services": [
+        {
+          "kind": "Service",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$idx_and_short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "plan_id": "$plan_id",
+              "offering_id": "$offering_id",
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "spec": {
+            "type": "NodePort",
+            "ports": [
+              {
+                "port": 27017,
+                "protocol": "TCP",
+                "name":"client"
+              },
+              {
+                "port": 28017,
+                "protocol": "TCP",
+                "name":"admin"
+              }
+            ],
+            "selector": {
+              "instance_id": "$instance_id"
+            }
+          },
+          "status": {
+            "loadBalancer": {}
+          }
+        }
+      ],
+      "serviceAccounts": [
+        {
+          "kind": "ServiceAccount",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$idx_and_short_instance_id",
+            "creationTimestamp": null,
+            "labels": {
+              "plan_id": "$plan_id",
+              "offering_id": "$offering_id",
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "org": "$org",
+              "instance_id": "$instance_id",
+              "space": "$space"
+            }
+          },
+          "secrets": null
+        }
+      ],
+      "secrets": [
+        {
+          "kind": "Secret",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "$short_instance_id-mongodb3-credentials",
+            "creationTimestamp": null,
+            "labels": {
+              "idx_and_short_instance_id": "$idx_and_short_instance_id",
+              "managed_by": "TAP",
+              "instance_id": "$instance_id"
+            }
+          },
+          "data": {
+            "mongodb-username": "$base64-$random1",
+            "mongodb-password": "$base64-$random2",
+            "mongodb-dbname": "$base64-$random3"
+          }
+        }
+      ]
+    }],
+    "hooks": null
+  },
+  "services" : [{
+    "name": "mongodb3",
+    "description": "MongoDB 3.3.12 service for application development and testing",
+    "metadata":[
+      {"key":"displayName","value": "MongoDB 3.3.12"},
+      {"key":"longDescription","value": "A MongoDB 3.3.12 service for development and testing running inside a Docker container"},
+      {"key":"providerDisplayName","value": "Ferran Rodenas"},
+      {"key":"documentationUrl","value": "https://github.com/frodenas/docker-mongodb/blob/master/README.md"},
+      {"key":"supportUrl","value": "https://github.com/frodenas/docker-mongodb"}
+    ],
+    "bindable": true,
+    "tags": [
+      "mongo3",
+      "k8s"
+    ],
+    "plans": [
+      {
+        "name": "free",
+        "description": "free",
+        "free": true
+      }
+    ]
+  }]
+}

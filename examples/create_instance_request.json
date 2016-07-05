@@ -1,0 +1,9 @@
+{
+  "name":"example_instance",
+  "type":"service",
+  "classId":"846a4e82-26e5-4207-4742-09c4258cae61",
+  "bindings":[],
+  "metadata":[
+    {"key": "PLAN_ID", "value": "b7ba584f-a468-4def-9b8b-41d850ec4bdf"}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "binary-test-name",
+  "description": "offering from JAR",
+  "metadata": [],
+  "bindable": true,
+  "tags": [
+    "k8s"
+  ],
+  "plans": [
+    {
+      "name": "free",
+      "description": "free",
+      "cost": "free"
+    }
+  ]
+}
